@@ -1,0 +1,244 @@
+---
+title: "Data Wrangling (Data Preprocessing)"
+author: "Patrick Adrianus"
+subtitle: "Practical assessment 1"
+date: ""
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+## **Setup**
+
+```{r, warning = FALSE}
+
+# Load the necessary packages required to reproduce the report. For example:
+
+library(kableExtra)
+library(magrittr) 
+
+```
+
+## **Student names, numbers and percentage of contributions**
+
+```{r, echo=FALSE}
+
+# Add your names, numbers and percentage of your contribution here.
+
+na<- c(" Patrick Adrianus"," Anjali Lata Rambarath")
+no<- c(" s3967271"," s3943075")
+pc<- c("50%","50%")
+
+s<- data.frame(cbind(na,no,pc))
+colnames(s)<- c("Student name", "Student number", "Percentage of contribution")
+
+s %>% kbl(caption = "Group information") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+
+
+
+```
+
+## **Data Description**
+
+This dataset is sourced from https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset
+
+According to the requirements, we needed one numeric and one categorical data. We decided to chose a dataset pertaining to 12 attributes, with six categorical variables and six numerical variables
+
+It have 12 Attributes which include id, gender, age, hypertension, heart_disease, ever_married, work_type, Residence_type,
+avg_glucose_level, bmi, smoking_status, stroke
+
+-   ID : Unique Identifier (int)
+-   Gender : "Male", "Female", or "Other" (Factor)
+-   Age : The age of the patient (num)
+-   Hypertension : 0 if the patient doesn't have hypertension and 1 if the patient have hypertention (int)
+-   heart_disease : 0 if the patient doesn't have heart disease and 1 if the patient have hear disease (int)
+-   ever_married : "No" or "Yes" (Factor)
+-   work_type : "children", "Govt_jov", "Never_worked", "Private", or "Self-employed" (Factor)
+-   Residence_type : "Rural" or "Urban" (Factor)
+-   avg_glucose_level : average glucose level in patient's blood (num)
+-   bmi : body mass index (num)
+-   smoking_status : "formerly smoked", "never smoked", "smokes", or "Unknown" (Factor)
+-   stroke : 1 if the patient had a stroke or 0 if not (int)
+
+<!-- Locate an open source of data from the web. This can be a tabular, spreadsheet data (i.e., .txt, .csv, .xls, .xlsx files), data sets from other statistical software (i.e., SPSS, SAS, Stata etc. data files), or you can scrape HTML table data. -->
+
+<!-- Some sources for open data are provided below, but I encourage you to find others: -->
+
+<!-- * [http://www.abs.gov.au/](http://www.abs.gov.au/) -->
+
+<!-- * [https://www.data.vic.gov.au/](https://www.data.vic.gov.au/)      -->
+
+<!-- * [http://www.bom.gov.au/](http://www.bom.gov.au/) -->
+
+<!-- * [https://www.kaggle.com](https://www.kaggle.com)  -->
+
+<!-- As a minimum, your data set should include: -->
+
+<!-- * One numeric variable. -->
+
+<!-- * One qualitative (categorical) variable. -->
+
+<!-- There is no limit on the number of observations and number of variables. But keep in mind that when you have a very large data set, it will increase your reading time. -->
+
+## **Read/Import Data**
+
+<!-- Read/Import the data into R, then save it as a data frame. You can use Base R functions or readr, xlsx, readxl, foreign, rvest packages for this purpose. In this step, you must provide the R codes with outputs (i.e. head of data set) and explain everything that you do in order to import/read/scrape the data set. You can provide the R codes with outputs using R chunks like this: -->
+
+*   Download a stroke dataset in a local file directory.
+*   The 'read.csv' function is used to read the healthcare-dataset-stroke-data.csv file. The 'stringasFactors' is set to TRUE to make sure any columns containing text data be converted into factors (categorical values).
+*   'head()' function is used to display the first few rows of the data to examine the structure and content of the data.
+
+```{r, warning = FALSE, message = FALSE}
+
+# Import the data, provide your R codes here.
+
+data <- read.csv("healthcare-dataset-stroke-data.csv", stringsAsFactors = TRUE)
+head(data)
+
+```
+
+## **Inspect and Understand**
+
+After importing the data we need to inspect the columns to better understand of the data.
+
+```{r, warning = FALSE, message = FALSE}
+
+# Inspection of your data, provide R codes here.
+dim(data)
+colnames(data)
+str(data)
+
+data$hypertension <- as.logical(data$hypertension)
+
+data$heart_disease <- as.logical(data$heart_disease)
+
+data$bmi <- as.numeric(as.character(data$bmi))
+data$bmi[is.na(data$bmi)] <- NA
+
+data$stroke <- as.logical(data$stroke)
+
+#showing the levels of the factor class type 
+levels(data$gender)
+levels(data$ever_married)
+levels(data$work_type)
+levels(data$Residence_type)
+levels(data$smoking_status)
+
+head(data)
+str(data)
+
+```
+
+*   Checking the dimension of the imported data using 'dim()' function which output to 5110 rows and 12 columns.
+*   Checking the column name of the imported data using 'colnames()' function.
+*   Checking the structure of the imported data using 'str()' function.
+*   For the 'hypertension' column we use 'as.logical' function to converts the column from an integer to a logical variable. Logical variables have a value of TRUE or FALSE.
+*   For the 'heart_disease' column we use 'as.logical' function converts the column from an integer to a logical variable as the 'hypertension' column
+*   For the 'bmi' column we use 'as.character' function first to converts the column to character and then use the 'as.numeric' to converts it to numerical values. After that, 'is.na' function is used to replaced the missing or invalid values to 'NA'.
+*   For the 'stroke' column we use 'as.logical' function converts the column from an integer to a logical variable as the 'hypertension' and 'heart_disease' column
+*   Using the levels() function, we can see the different levels according to the column names and identify if it is relevant to our current data, where no further changes are needed. We recognise the data as a number according to the level that is associated with it
+*   'head()' function is used to display the first few rows of the data to examine the structure and content of the data after values and variable type manipulation.
+*   'str()' function is used to display the structures of the modified data.
+
+## **Subsetting**
+
+<!-- Subset the data frame using the first 10 observations (include all variables). Then convert it to a matrix. Check the structure of that matrix (i.e. check whether the matrix is a character, numeric, integer, factor, or logical) and explain in a few words why you ended up with that structure. Provide the R codes with outputs and explain everything that you do in this step. -->
+
+```{r, warning = FALSE, message = FALSE}
+
+# Subset your data and convert it to a matrix, provide R codes here.
+subset_data <- data[1:10, ]
+matrix_data <- as.matrix(subset_data)
+dim(matrix_data)
+str(matrix_data)
+```
+
+Provide explanations here.
+
+*   Subsetting the data by the rows allows us to present ten observations.
+*   We use the initial data frame, and using the square brackets [], we can subset the data by the rows. We specify the rows to the comma's left and leave the comma's right blank, indicating that we want all the columns/column names.
+*   As we want to convert the subsetted data into a matrix, we use the as.matrix() function to convert it whilst specifying the variable we are altering.
+*   To ensure that our dimensions are what we want and are correct, we use the dim() function, which presents (10 12). There are ten rows and twelve columns where no additional changes are needed.
+*   Followed by the str() function to present the variable names, class type and the variables to make sure they are what we want
+*   The structure shows that the class type for all the attributes is all chr (character); although there’s a mix of class types in the initial data, the as.matrix() function makes all the variable's class types become one to make it easier to produce calculations later on.
+
+
+
+## **Create a new Data Frame**
+
+<!-- You will create a new data frame from scratch. Note that, this step is independent from the dataset that you used in the previous steps.  -->
+
+<!-- In this step you should: -->
+
+<!-- * Create a data frame from scratch with 2 variables and 10 observations. Your data frame has to contain one integer variable and one ordinal variable. Make sure that you factorised and ordered the ordinal variable properly. Show the structure of your variables and the levels of the ordinal variable. -->
+
+<!-- * Create another numeric vector and use cbind() to add this vector to your data frame. After this step you should have 3 variables in the data frame.  -->
+
+<!-- * Provide the R codes with outputs and explain everything that you do in this step.  -->
+
+```{r, warning = FALSE, message = FALSE}
+
+
+# Create a new data frame, provide R codes here.
+#Creating two vectors, one ordinal(adding levels and sprcifying order=TRUE)and one numerical
+gradeLevel_vector <- factor(c("HD", "C", "DI",  "NN",  "PA", "PA", "C", "DI", "PA", "C"), levels = c("NN", "PA", "C", "DI", "HD"), order = TRUE)
+mark <- c(90, 65, 78, 44, 50, 53, 62, 79, 58, 63)
+
+#allows you to see the class type and convert if needed
+class(gradeLevel_vector)
+class(mark)
+
+#changing the mark vector to an integer
+mark_vector<- as.integer(mark)
+class(mark_vector)
+
+#Producing data frame and checking the class type 
+#As well as ordering the vectors into another DF
+gradesDf <- data.frame(gradeLevel_vector, mark_vector)
+df <- gradesDf[order(gradesDf$gradeLevel_vector), ]
+levels(df$gradeLevel_vector)
+str(df)
+head(df)
+
+#Making sure that the class type of anotherVector is numeric 
+previousmark <-c(83, 70, 55, 50, 72, 70, 83, 87, 50, 57)
+class(previousmark)
+previousmark <- as.numeric(previousmark)
+class(previousmark)
+
+#use cbind() to add vector to the data frame
+#againg ordering the data frame and showing the first 6 rows of the unordered data frame and ordered data frame
+grades <- cbind(gradesDf, previousmark)
+ordered_grades <- grades[order(grades$gradeLevel_vector),]
+levels(ordered_grades$gradeLevel_vector)
+head(grades)
+str(ordered_grades)
+head(ordered_grades)
+
+```
+
+Provide explanations here.
+ 
+*   Two variables are created, one containing ordinal variables, the "gradeLevel_vector ", and the other containing numerical variables, the "mark."
+*   According to the specifications, we want the ordinal variables to be in the factor class type and numerical variables to be in the integer class type. We used the class() function to check the ordinal variables class type
+*   By using the levels() function, we can see the different levels according to the column names and identify if it is relevant to our current data, where no further changes are needed
+*   We then implemented the factor() function to change the variable to a factor and as.integer() function to change our numerical data to an integer.
+gradeDf is our new variable to represent our data frame by using the data.frame() function and adding the necessary variables within it.
+*   We created another variable and implemented the order() function using the initial data frame and the ordinal variable (gradeLevel_vector) to make sure the data frame was ordered correctly
+*   Again, we use the str() function to display the database's internal workings, check the class types, and make changes if necessary.
+*   As well as utilising the head() function to display the first six rows to make sure that the displayed data is correct and shows two columns of variables, where there is one ordinal column and one numerical column
+*   We then add another variable of numerical data called "previousmark", checking the type with the class() function and changing it to display only numeric data using the as.numeric() function.
+*   Using the cbind() function with the initial data frame (gradesDF) and the other variable (previousmark) where it is then saved to a new vector and ordered using the order() function using the "grades" data frame and the "gradeLevel_vector" where it's then ranked according to its level
+*   First, we use the head() function on grades to show the unordered data and then use str() to show the internal workings and head() to show the ordered data. 
+
+<!-- ## IMPORTANT NOTE:  -->
+
+<!-- The report must be uploaded to Assessment 1 section in Canvas as a **PDF** document with R codes and outputs showing. The easiest way to achieve this is to run all R chunks first, then **Preview** your notebook in **HTML** (by clicking Preview), then **Open in Browser (Chrome)**, then **Right Click on the report in Chrome** , then **Click Print** and Select the Destination Option to **Save as PDF**. Upload this PDF report as one single file via the Assessment 1 page in CANVAS. -->
+
+<!-- **DELETE the instructional text provided in the template. Failure to do this will INCREASE the SIMILARITY INDEX reported in TURNITIN** If you have any questions regarding the Assessment instructions and the R template, please post it on the discussion board.  -->
+
+<br> <br>

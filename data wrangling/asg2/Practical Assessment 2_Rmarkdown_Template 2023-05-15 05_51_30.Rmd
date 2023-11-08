@@ -1,0 +1,438 @@
+---
+title: "Data Wrangling (Data Preprocessing)"
+author: "Patrick Adrianus"
+subtitle: Practical Assessment 2
+date: "17 May 2023"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+
+## **Setup**
+
+```{r}
+
+# Load the necessary packages required to reproduce the report.
+
+library(kableExtra)
+library(magrittr)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(zoo)
+library(MVN)
+
+```
+
+
+## **Student names, numbers and percentage of contributions**
+```{r, echo=FALSE}
+
+# Add your names, numbers and percentage of your contribution here.
+
+na<- c(" Patrick Adrianus"," Anjali Lata Rambarath")
+no<- c(" s3967271","  s3943075")
+pc<- c(" 60%","  40%")
+
+s<- data.frame(cbind(na,no,pc))
+colnames(s)<- c("Student name", "Student number", "Percentage of contribution")
+
+s %>% kbl(caption = "Group information") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+```
+<br>
+<br>
+
+## **Executive Summary**
+
+* In theory, both datasets are relatively untidy in similar aspects, and the importance of having a tidy dataset is so that the data extraction is simple.
+* We read both datasets and manipulated them separately to prepare for merging them. We are to change the class types using the as.[class type] function to ensure there aren’t abnormalities and count the missing values in both datasets to create a usable and appropriate dataset. 
+* Initially, tidying the datasets, we remove unnecessary values and rows using the pivot_longer function. We do this as the current dataset shows more than one observation in a row, making it hard to merge the dataset and perform other analyses on them. When introducing the pivot_longer function, we present two variable names, GDP and Population Growth, based on our analysis. In this section, we rename and set the class type for some variables, keeping only what we need. 
+* Only after this can we join the two datasets based on the country ‘Code’ and ‘Year’, removing the duplicate variable names. 
+* The variable we added is GDP growth (%), where we get the percentage of the GDP for each row. 
+* We scanned for missing data, and to combat the significant amount of missing data, a predicted model was used so that valuable data didn’t get removed. After filling the dataset appropriately, we scan for special values and check Nan values. In the end, we check for duplicated rows and address them properly. 
+* We then visually represent the GDP and Population growth and check for any outliers. We make appropriate adjustments for the mvn function to work correctly and handle the outliers using the capping method. 
+* We transform the dataset by presenting the centred and scaled versions and attempting to transform the dataset to minimise the skewness and create a normal distribution.
+<br>
+<br>
+
+## **Data**
+
+Provide explanations here.
+The datasets were a GDP dataset and a population growth dataset over time. 
+The population growth dataset shows us how much the population increases each year as a percentage annually. This dataset was found on the world bank, https://data.worldbank.org/indicator/SP.POP.GROW 
+The variables in this dataset include:
+
+*   Country Name: The name of the country
+*   Country Code: A three-letter code that represents the country and can be used as a unique identifier
+*   Indicator Name: Represents the population growth annually as a percentage. This variable can be dropped as it doesn't give us valuable data
+*   Indicator code: A code to represent the indicator name and can be used as a unique identifier. This variable can be dropped as it doesn't give us helpful data
+*   from 1960 - 2022: It presents the population growth annually as a percentage for each country and each year.
+
+Similarly, the GDP dataset shows us the increase each year annually by $ (dollars). The dataset was found on Kaggle from https://www.kaggle.com/datasets/zgrcemta/world-gdpgdp-gdp-per-capita-and-annual-growths.
+While Kaggle hosts an array of data files, we have chosen to work with gdp.csv to obtain unprocessed data.
+The variables in this dataset include:
+
+*   Country Name: The name of the country 
+*   Code: A three-letter code that represents the country and can be used as a unique identifier
+*   from 1960 - 2020: Presents the GDP of each country for each year
+```{r}
+
+# Import the data, provide your R codes here.
+
+#reading gdp dataset
+gdp_data <- read_csv("gdp.csv")
+
+#Reading population growth dataset
+population_growth <- read_csv("API_SP.POP.GROW_DS2_en_csv_v2_5455041.csv", skip = 4)
+
+```
+
+<br>
+<br>
+
+## **Understand** 
+
+
+```{r}
+# This is the R chunk for the Understand Section
+
+# Understand the gdp dataset
+head(gdp_data)
+glimpse(gdp_data)
+gdp_na_count <- sum(is.na(gdp_data))
+gdp_na_count
+
+# Convert 'Country Name' and 'Code' in gdp_data to factor
+gdp_data$`Country Name` <- as.factor(gdp_data$`Country Name`)
+gdp_data$Code <- as.factor(gdp_data$Code)
+
+# Understand the population growth dataset
+head(population_growth)
+glimpse(population_growth)
+population_na_count <- sum(is.na(population_growth))
+population_na_count
+
+# Convert 'Country Name' and 'Country Code' in population_growth to factor
+population_growth$`Country Name` <- as.factor(population_growth$`Country Name`)
+population_growth$`Country Code` <- as.factor(population_growth$`Country Code`)
+```
+
+Provide explanations here. 
+For better understanding in the gdp and population growth data, Data must be loaded and examined, the amount of missing values must be counted, and some variables must be changed to factor type. We do the following:
+
+1. The GDP Dataset
+*   head(gdp_data): This will print the first 6 rows of the gdp_data dataframe.
+*   glimpse(gdp_data): This function gives the structure of the dataframe, including the number of observations, variables, and the type of each variable.
+*   gdp_na_count <- sum(is.na(gdp_data)) and gdp_na_count: These lines count the total number of missing values in the gdp dataset.
+*   gdp_data$'Country Name' <- as.factor(gdp_data$'Country Name'): These lines convert the 'Country Name' column to a factor.
+*   gdp_data$Code <- as.factor(gdp_data$Code): These lines convert the 'Code' column to a factor.
+
+2. The Population Growth Dataset
+*   head(population_growth): This will print the first 6 rows of the population_growth dataframe.
+*   glimpse(population_growth): This function gives the structure of the dataframe, including the number of observations, variables, and the type of each variable.
+*   population_na_count <- sum(is.na(population_growth)) and population_na_count: These lines count the total number of missing values in the population_growth dataset.
+*   population_growth$`Country Name` <- as.factor(population_growth$`Country Name`): These lines convert the 'Country Name' column to a factor.
+*   population_growth$`Country Code` <- as.factor(population_growth$`Country Code`): These lines convert the 'Country Code' column to a factor.
+
+<br>
+<br>
+
+##	**Tidy & Manipulate Data I **
+
+
+```{r}
+# This is the R chunk for the Tidy & Manipulate Data I 
+# Tidying the gdp_data dataset
+tidy_gdp_data <- gdp_data %>% 
+  select(-'Unnamed: 65') %>%
+  pivot_longer(cols = `1960`:`2020`, names_to = "Year", values_to = "GDP") %>%
+  mutate(Year = as.integer(Year))
+
+str(tidy_gdp_data)
+
+# Tidying the population_growth dataset
+tidy_population_growth <- population_growth %>%
+  pivot_longer(cols =  -c(1:4), names_to = "Year", values_to = "Population Growth (annual %)") %>%
+  mutate(Year = as.integer(Year)) %>%
+  select(-c(`Indicator Name`, `Indicator Code`)) %>%
+  rename(Code = `Country Code`)
+
+str(tidy_population_growth)
+
+# Joining the datasets
+joined_data <- inner_join(tidy_gdp_data, tidy_population_growth, by = c("Code", "Year"))
+               
+# Removing the duplicate Country Name
+joined_data <- joined_data %>% 
+  select(-`Country Name.y`) %>% 
+  rename(Country = `Country Name.x`)
+head(joined_data)
+```
+
+In Tidy & Manipulate Data I, we wanted to tidy and select all of the relevant column to be merged together.
+
+After dropping the 'Unnamed: 65' column in gdp_data, we used the pivot_longer function to reshape the data from a wide format to a long format. In this step, the columns from '1960' to '2020', which presumably represent years, are gathered into a single column named "Year", and the corresponding values are stored in a new column named "GDP". We then converted the "Year" column to integer type for easier analysis later on.
+
+Similarly, we tidied the population_growth dataset. We reshaped the data to long format using the pivot_longer function, this time excluding the first four columns from reshaping. The remaining columns are gathered into a "Year" column and their corresponding values into a "Population Growth" column. The "Year" column is again converted to integer type.
+
+We also dropped the columns "Indicator Name" and "Indicator Code" as they aren't necessary for our analysis. The Country Code column is renamed to Code for consistency and the Population growth is renamed to Population Growth (annual %).
+
+Next, we joined the two datasets, tidy_gdp_data and tidy_population_growth, using an inner join operation. This operation returns all rows from both tables where there is a match based on the specified conditions, in this case, the "Code" and "Year". This means we're looking to analyze the GDP and population growth for each country and each year that is available in both datasets.
+
+Finally, to avoid confusion with duplicate columns, we dropped the Country Name.y column (which presumably comes from the tidy_population_growth dataset) and renamed the Country Name.x column (from the tidy_gdp_data dataset) to just "Country". This leaves us with a single "Country" column in our final, joined dataset.
+<br>
+<br>
+
+## **Tidy & Manipulate Data II** 
+
+```{r}
+# This is the R chunk for the Tidy & Manipulate Data II 
+joined_data <- joined_data %>%
+  arrange(Code, Year) %>%
+  group_by(Code) %>%
+  mutate(`GDP_growth (%)` = (GDP/lag(GDP) - 1)*100)%>%
+  mutate(`GDP_growth (%)`= round(`GDP_growth (%)`, 2))
+
+head(joined_data)
+```
+
+In this step, we're creating a new variable from existing variables in our dataset. "GDP_growth" will represent the annual percentage change in GDP for each country and year. This can provide us with valuable insights about the rate of economic growth in each country, year by year. The code explanation is as following:
+
+*    arrange(Code, Year): We're arranging (sorting) the data first by "Code" (which presumably represents each country) and then by "Year". This ensures that our data is in the correct order for our next calculations.
+
+*   group_by(Code): We're grouping the data by "Code". This means that the following operations (specifically, the mutate function) will be applied within each group of rows that have the same "Code". In other words, it's ensuring that our calculations are done for each country separately.
+
+*   mutate(GDP_growth (%)= (GDP/lag(GDP) - 1)*100): This is where we're actually creating the new "GDP_growth" variable. The lag(GDP) function gives us the GDP value from the previous row (which, because of how we arranged our data, represents the previous year's GDP for the same country). We're then subtracting this value from the current row's GDP, dividing by the lagged GDP to get the relative change, and multiplying by 100 to convert it to a percentage.
+
+*   round('GDP_growth (%)', 2) will round the "GDP_growth (%)" variable to 2 decimal places. This will keep "GDP_growth" as a numeric variable while ensuring that it only has two numbers after the decimal point. This can make the data easier to read and interpret, while still retaining its numerical properties for further calculations.
+<br>
+<br>
+
+##	**Scan I **
+
+```{r}
+# This is the R chunk for the Scan I
+#Make a new data
+joined_data_fill <- joined_data
+
+#GDP Value added
+# fit a linear regression model using the available data
+model <- lm(GDP ~ `Population Growth (annual %)`, data = joined_data_fill[!is.na(joined_data_fill$GDP),])
+
+# predict missing GDP values
+predicted_GDP <- predict(model, newdata = joined_data_fill)
+
+# replace only NA GDP values with predicted values
+joined_data_fill$GDP[is.na(joined_data_fill$GDP)] <- predicted_GDP[is.na(joined_data_fill$GDP)]
+
+#Fill the remaining NA values
+joined_data_fill <- joined_data_fill %>%
+  group_by(Code) %>%
+  mutate(GDP = ifelse(Year == min(Year), mean(GDP, na.rm = TRUE), GDP))
+
+#Remove the row if it is still NA
+joined_data_fill <- joined_data_fill[!is.na(joined_data_fill$GDP), ]
+which(is.na(joined_data_fill$GDP))
+
+# Update the 'GDP_growth' after 'GDP' with NA variables filled
+joined_data_fill <- joined_data_fill %>%
+  arrange(Code, Year) %>%
+  group_by(Code) %>%
+  mutate(`GDP_growth (%)` = (GDP/lag(GDP) - 1)*100) %>%
+  mutate(`GDP_growth (%)`= round(`GDP_growth (%)`, 2)) %>%
+  mutate(`GDP_growth (%)` = ifelse(Year == min(Year), 0, `GDP_growth (%)`))
+
+# Population Growth Value Added 
+# Filled the NA value in the first year to 0
+joined_data_fill <- joined_data_fill %>%
+  group_by(Code) %>%
+  mutate(`Population Growth (annual %)` = ifelse(Year == min(Year), 0, `Population Growth (annual %)`))
+
+#Filled New Zealand population growth missing value no in the first year
+joined_data_fill <- joined_data_fill %>%
+  group_by(Code) %>%
+  mutate(`Population Growth (annual %)` = na.approx(`Population Growth (annual %)`, na.rm = TRUE))
+
+# Scan again after alteration on the joined_data
+head(sapply(joined_data_fill, is.infinite))
+head(sapply(joined_data_fill, is.finite))
+
+#check again data for Nan values
+na_positions <- lapply(joined_data_fill, function(x) which(is.na(x)))
+print(na_positions)
+
+# Check for duplicate rows
+duplicate_rows <- duplicated(joined_data_fill)
+print(sum(duplicate_rows))
+```
+
+First we inspect the data and found that GDP is a field with significant missing data. In some cases, GDP data is entirely absent for certain countries during the early years of data collection. This could be due to a variety of factors, such as insufficient data recording practices or changes in national boundaries and governance.
+
+To address this problem, the script employs a linear regression model to predict missing GDP values. The model uses the 'Population Growth' variable as an independent predictor, assuming there is a positive relationship between a country's population growth and its GDP. This is a reasonable assumption in many cases because increased population can lead to increased demand, productivity, and, therefore, GDP.
+
+The linear regression model is trained on the non-missing values in the GDP dataset. The predicted GDP values are then used to fill in the gaps in the original data where GDP was missing.
+
+However, there may still be missing GDP values if the first year or multiple initial years of data for a country are missing. This is because the linear regression model cannot extrapolate beyond the range of years in the training data.
+
+To handle these remaining missing values, the script then uses a group-wise operation to fill missing GDP values with the average GDP of the respective country. This operation assumes that the missing GDP values would be similar to the mean GDP value for the given country.
+
+Finally, the script updates the 'GDP_growth (%)' field based on the now filled-in GDP data. GDP growth is calculated as the percentage change in GDP from the previous year, and missing values in the first year are filled with 0 as a reasonable assumption.
+
+At the end of these operations, we expect that all missing values in GDP have been filled appropriately based on the available data and assumptions.
+<br>
+<br>
+
+##	**Scan II**
+
+```{r}
+# This is the R chunk for the Scan II
+#understanding the relationship between gdp and population growth therefore use the multivariate outliers method 
+
+#bivariate
+#shows us the outlier for each year for gdp and population growth separately
+# Set up the graphics to allow two plots
+par(mfrow = c(2, 2))
+
+# Plot the first boxplot
+boxplot(joined_data_fill$GDP ~ joined_data_fill$`Year`, 
+        main = "GDP by Year",
+        xlab = "Year", 
+        ylab = "GDP")
+
+# Plot the second boxplot
+boxplot(joined_data_fill$`Population Growth (annual %)` ~ joined_data_fill$`Year`, 
+        main = "Population Growth by Year",
+        xlab = "Year", 
+        ylab = "Population Growth (annual %)")
+
+# Plot the multivariate scatterplot
+plot(joined_data_fill$GDP ~ joined_data_fill$`Population Growth (annual %)`,
+     main = "GDP vs Population Growth",
+     xlab = "Population Growth (annual %)",
+     ylab = "GDP")
+#shows the distributions of the GDP over the population growth
+#the gdp has the most growth when the population growth is between -5 and 5
+
+# Reset graphics parameters to default
+par(mfrow = c(1, 1))
+
+#excluding values that aren't necessary and doesn't help us investigate what we want to 
+joined_data_gdp <- joined_data_fill %>% select(Year, GDP)
+joined_data_population <- joined_data_fill %>% select(Year, `Population Growth (annual %)`)
+
+#removing Code which is the variable that joined the two variables as we are now directly working with the Year and gdp and the year and population growth
+gdp <- joined_data_gdp[ , unlist(lapply(joined_data_gdp, is.numeric))]
+pop_growth <- joined_data_population[ , unlist(lapply(joined_data_population, is.numeric))]
+
+
+#using argument in MVN package
+#better to use second approach as it is a built in function and doing so manually may result in incorrect imputations
+#finding and noting the outliers
+results_gdp <- mvn(data = gdp,
+                      multivariateOutlierMethod = "quan", 
+                      showOutliers = TRUE,
+                      showNewData = TRUE)
+
+results_population <- mvn(data = pop_growth,
+                      multivariateOutlierMethod = "quan", 
+                      showOutliers = TRUE,
+                      showNewData = TRUE)
+
+#Handle the outliers 
+cap <- function(x){
+    quantiles <- quantile( x, c(0.05, 0.25, 0.75, .95 ) )
+    x[ x < quantiles[2] - 1.5 * IQR(x) ] <- quantiles[1]
+    x[ x > quantiles[3] + 1.5 * IQR(x) ] <- quantiles[4]
+    x}
+
+gdp_capped <- joined_data_fill$GDP %>% cap()
+summary(joined_data_gdp)
+summary(gdp_capped)
+
+pop_capped <- joined_data_fill$`Population Growth (annual %)`%>% cap()
+summary(joined_data_population)
+summary(pop_capped)
+
+```
+
+* Our primary and merged dataset is multivariate; therefore, we need to be able to use the multivariate/bivariate outlier method. Our main point is to build an understanding of the relationship between the GDP and Population growth. 
+* We first use the bivariate outlier detection method to create a boxplot to see the relationship between the Year and the GDP and the Year and the population growth. This shows us how each variable is affected over time and visually represents potential outliers.
+* We also use the multivariate scatterplot to depict the relationship between GDP and population growth, showing that GDP slightly increases as the population increases. However, once the population growth percentage exceeds 10%, there is minimal GDP increase. The scatterplot is also able to help us detect abnormal observations.
+* We then subset the data to only reference the numerical variables we are directly referencing, which is the relationship between the Year and GDP and between the Year and the Population Growth. 
+* As earlier on, we merged the two datasets using a common variable of ‘Code’, which is a factor, we have to unlist in to do computation using the MVN package and make sure that the class of the variables in question is class numeric.
+* We use an MVN built-in function to visually represent the outliers using our subsetted GDP and Population growth data. Using the built-in function multivariateOutlierMethod = “quan” allows us to detect outliers using the chi-squared distribution and present them on a QQ plot.
+* We used the capping method to handle the outliers we were presented with, as it felt irresponsible to delete the outliers as they can still contain valuable information by creating a cap function detailing the mathematics behind the outliers and assigning variables to them.
+* Utilising the function, we use them with the joined_data_fill dataset, which doesn’t contain missing variables and directly references GDP and population growth.
+* By showing the summary of the joined_data_fill dataset and the capped dataset, we can see how the function manipulates the minimum values, maximum values, quartile 1, median, quartile three and the mean.
+<br>
+<br>
+
+##	**Transform **
+
+```{r}
+# This is the R chunk for the Transform Section
+#centering and scaling 
+centered_gdp <- scale(joined_data_fill$GDP, center = TRUE, scale = FALSE)
+hist(centered_gdp)
+
+#squared
+sqr_gdp<- joined_data_fill$GDP^2
+
+#cubed
+cubed_gdp <- joined_data_fill$GDP^3
+
+#log
+log_gdp <- log10(joined_data_fill$GDP)
+
+#ln
+ln_gdp <- log(joined_data_fill$GDP)
+
+#sqrt
+sqrt_gdp <- sqrt(joined_data_fill$GDP)
+
+#cuberoot
+cubrt_gdp <- joined_data_fill$GDP^(1/3)
+
+#reciprocol 
+rec_gdp <- 1/joined_data_fill$GDP
+
+#check normality
+#qqplot
+car :: qqPlot(joined_data_fill$GDP, dist = "norm")
+
+par(mfrow = c(3,3))
+hist(joined_data_fill$GDP, breaks = 30, main = "Histogram of GDP")
+hist(sqr_gdp, breaks = 30, main = "Histogram of Squared\n Tranformation GDP")
+hist(cubed_gdp, breaks = 30, main = "Histogram of Cubed\n Transformation GDP")
+hist(log_gdp, breaks = 30, main = "Histogram of Log\n Transformation GDP")
+hist(ln_gdp, breaks = 30, main = "Histogram of Natural Log\n Transformation GDP")
+hist(sqrt_gdp, breaks = 30, main = "Histogram of Square Root\n Transformation of GDP")
+hist(cubrt_gdp, breaks = 30, main = "Histogram of Cubed Root\n Transformation of GDP")
+hist(rec_gdp, breaks = 30, main = "Histogram of Recipricol\n Transformation of GDP")
+par(mfrow = c(1,1))
+
+par(mfrow = c(3,3))
+car::qqPlot(sqr_gdp)
+car::qqPlot(cubed_gdp)
+car::qqPlot(log_gdp)
+car::qqPlot(ln_gdp)
+car::qqPlot(sqrt_gdp)
+car::qqPlot(cubrt_gdp)
+car::qqPlot(rec_gdp)
+par(mfrow = c(1,1))
+```
+
+The variable we are transforming is the GDP to decrease the skewness and make the distribution normal distribution.  By doing a series of transformations, we can see which transformation method is closest to a normal distribution. 
+To do this, we first centre and scale the dataset based on GDP so that in each column, it is transformed so that the variable, GDP, has zero means. This method involves the division of the values to the standard deviation.
+We also compare the squared, cubed, log, natural log, square root, cubed root and reciprocal transformation to see if we can decrease the skewness and create something closer to a normal distribution where we use breaks of 30 as that can show a decent pattern without overplotting and having everything look that same.
+To check the normality, we review each of these attributes against the QQ Plot to see if there is a stronger correlation and to estimate the distribution parameters of the fitted distribution.
+
+
+<br>
+<br>
+
